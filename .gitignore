@@ -1,3 +1,4 @@
 node_modules
 .turbo
 .github/*
+apps/server/prisma/generated/*

@@ -1,10 +1,475 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated"
-  moduleFormat = "esm"
+  provider        = "prisma-client"
+  output          = "../generated"
+  moduleFormat    = "esm"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgres"
-  url      = env("DATABASE_URL")
+  provider   = "postgres"
+  url        = env("DATABASE_URL")
+  extensions = [uuidOssp(map: "uuid-ossp")]
+}
+
+// ผู้ใช้งาน
+model User {
+  id                 String             @id @default(uuid())
+  username           String             @unique
+  password           String
+  email              String?
+  role               Role               @default(User)
+  account            Account?
+  student            Student?
+  teacher            Teacher?
+  sessions           Session[]
+  userRole           UserRole[]
+  status             String?
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  updatedBy          String?
+  createdBy          String?
+  verificationTokens VerificationToken? @relation(fields: [verificationToken], references: [token])
+  verificationToken  String?
+  refreshToken       String?
+  accessToken        String?
+  expiresAt          Int?
+
+  @@unique([username, verificationToken], name: "users_key_verificationToken")
+  @@index([username, verificationToken], name: "users_index_verificationToken")
+  @@map("user")
+}
+
+model RolePermission {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  label       String     @unique
+  permissions Json
+  userRole    UserRole[]
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  updatedBy   String?
+  createdBy   String?
+
+  @@map("role_permission")
+}
+
+model UserRole {
+  id               String          @id @default(uuid())
+  user             User            @relation(fields: [userId], references: [id])
+  userId           String
+  rolePermission   RolePermission? @relation(fields: [rolePermissionId], references: [id])
+  rolePermissionId String?
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  updatedBy        String?
+  createdBy        String?
+
+  @@map("user_role")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  User       User[]
+
+  @@unique([identifier, token])
+  @@map("verification_token")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+
+  @@map("session")
+}
+
+model Account {
+  id           String    @id @default(uuid())
+  userId       String?   @unique
+  avatar       String? // avatar path
+  title        String?
+  firstName    String?
+  lastName     String?
+  idCard       String?
+  birthDate    DateTime?
+  bloodType    String?
+  fatherName   String?
+  fatherPhone  String?
+  motherName   String?
+  motherPhone  String?
+  parentName   String?
+  parentPhone  String?
+  addressLine1 String?
+  subdistrict  String?
+  district     String?
+  province     String?
+  postcode     String?
+  country      String?
+  phone        String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  updatedBy    String?
+  createdBy    String?
+  user         User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, id], name: "account_key")
+  @@index([firstName, lastName], name: "account_name")
+  @@map("account")
+}
+
+// นักเรียน นักศึกษา
+model Student {
+  id                 String               @id @default(uuid())
+  studentId          String?              @unique
+  isGraduation       Boolean?
+  graduationYear     Int?
+  graduationDate     DateTime?
+  studentStatus      String? // กำลังศึกษา, ออกก่อนกำหนด, จบการศึกษา,
+  group              String?
+  status             String?              @default("normal") // normal = ปกติ, intern = ฝึกงาน
+  user               User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String?              @unique
+  classroom          Classroom?           @relation(fields: [classroomId], references: [id], onUpdate: Cascade)
+  classroomId        String?
+  department         Department?          @relation(fields: [departmentId], references: [id], onUpdate: Cascade)
+  departmentId       String?
+  program            Program?             @relation(fields: [programId], references: [id], onUpdate: Cascade)
+  programId          String?
+  level              Level?               @relation(fields: [levelId], references: [id])
+  levelId            String?
+  levelClassroom     LevelClassroom?      @relation(fields: [levelClassroomId], references: [id])
+  levelClassroomId   String?
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  updatedBy          String?
+  createdBy          String?
+  goodnessIndividual GoodnessIndividual[]
+  badnessIndividual  BadnessIndividual[]
+  VisitStudent       VisitStudent[]
+
+  @@unique([userId, studentId], name: "student_users")
+  @@map("student")
+}
+
+// ครูผู้สอน ครูอาจารย์ ครูอาจารย์พิเศษ และบุคลากรอื่นๆ
+model Teacher {
+  id                    String                  @id @default(uuid())
+  teacherId             String?                 @unique
+  jobTitle              String? // ตำแหน่ง
+  academicStanding      String? // วิทยฐานะ
+  classroomIds          String[]                @default([]) // รหัสห้องเรียนที่สอน
+  classrooms            Classroom[] // ครูประจำชั้น
+  rfId                  String?
+  program               Program?                @relation(fields: [programId], references: [id])
+  programId             String? // สาขาวิชา
+  user                  User?                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                String?                 @unique
+  department            Department?             @relation(fields: [departmentId], references: [id], onUpdate: Cascade)
+  departmentId          String?
+  levelClassroom        LevelClassroom?         @relation(fields: [levelClassroomId], references: [id])
+  levelClassroomId      String?
+  status                String?
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+  updatedBy             String?
+  createdBy             String?
+  reportCheckIn         ReportCheckIn[]
+  activityCheckInReport ActivityCheckInReport[]
+
+  @@unique([userId, teacherId], name: "teacher_users")
+  @@map("teacher")
+}
+
+// ระดับชั้นเรียนรายสาขาวิชา
+// ปวช.1/1-ช่างก่อสร้าง
+model Classroom {
+  id                    String                  @id @default(uuid())
+  classroomId           String?                 @unique
+  name                  String?                 @unique
+  description           String?
+  teacherIds            String[]                @default([]) // รหัสครูประจำชั้น
+  teachers              Teacher[]
+  student               Student[]
+  course                Course[]
+  level                 Level?                  @relation(fields: [levelId], references: [id])
+  levelId               String?
+  program               Program?                @relation(fields: [programId], references: [id])
+  programId             String?
+  department            Department?             @relation(fields: [departmentId], references: [id], onUpdate: Cascade)
+  departmentId          String?
+  status                String?
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+  updatedBy             String?
+  createdBy             String?
+  levelClassroomIds     String[]                @default([]) // รหัสระดับชั้นเรียนรายสาขาวิชา
+  levelClassrooms       LevelClassroom[]
+  reportCheckIn         ReportCheckIn[]
+  activityCheckInReport ActivityCheckInReport[]
+  goodnessIndividual    GoodnessIndividual[]
+  badnessIndividual     BadnessIndividual[]
+  VisitStudent          VisitStudent[]
+
+  @@map("classroom")
+}
+
+// ระดับชั้นเรียน
+// ปวช.1/1
+model LevelClassroom {
+  id               String      @id @default(uuid())
+  levelClassroomId String?     @unique
+  name             String?
+  description      String?
+  status           String?
+  student          Student[]
+  teacher          Teacher[]
+  program          Program?    @relation(fields: [programId], references: [id])
+  programId        String?
+  level            Level?      @relation(fields: [levelId], references: [id])
+  levelId          String?
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  updatedBy        String?
+  createdBy        String?
+  classroomIds     String[]    @default([]) // รหัสห้องเรียน
+  classrooms       Classroom[]
+
+  @@map("level_classroom")
+}
+
+// อาจารย์ประจำห้องที่ปรึกษา
+model TeacherOnClassroom {
+  id          String   @id @default(uuid())
+  teacherId   String // relation scalar field (used in the `@relation` attribute above)
+  classroomId String // relation scalar field (used in the `@relation` attribute above)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedBy   String?
+  createdBy   String?
+
+  @@unique([teacherId, classroomId], name: "teacherOnClassroomKey")
+  @@map("teacher_on_classroom")
+}
+
+// แผนกวิชา
+model Department {
+  id           String      @id @default(uuid())
+  departmentId String?
+  name         String?
+  description  String?
+  teacher      Teacher[]
+  student      Student[]
+  program      Program[]
+  status       String?
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  updatedBy    String?
+  createdBy    String?
+  classroom    Classroom[]
+
+  @@map("departments")
+}
+
+// สาขาวิชา
+model Program {
+  id             String           @id @default(uuid())
+  programId      String           @unique
+  name           String?
+  description    String?
+  student        Student[]
+  course         Course[]
+  teacher        Teacher[]
+  levelClassroom LevelClassroom[]
+  classroom      Classroom[]
+  level          Level?           @relation(fields: [levelId], references: [id])
+  levelId        String?
+  department     Department?      @relation(fields: [departmentId], references: [id])
+  departmentId   String?
+  status         String?
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  updatedBy      String?
+  createdBy      String?
+
+  @@map("programs")
+}
+
+// รายวิชา
+model Course {
+  id             String     @id @default(uuid())
+  courseId       String?    @unique
+  courseName     String?
+  numberOfCredit Int? // จำนวนหน่วยกิต
+  type           String? // รายวิชาพื้นฐาน, รายวิชาเพิ่มเติม, กิจกรรมพัฒนาผู้เรียน
+  evaluation     String? // ประเมินผลรายภาคเรียน, ประเมินผลรายปี
+  status         String?
+  programId      String? // รหัสสาขาวิชา
+  program        Program?   @relation(fields: [programId], references: [id])
+  classroomId    String?
+  classroom      Classroom? @relation(fields: [classroomId], references: [id])
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+  updatedBy      String?
+  createdBy      String?
+
+  @@map("courses")
+}
+
+// ระดับชั้น
+// ปวช.
+// ปวส.
+model Level {
+  id             String           @id @default(uuid())
+  levelId        String?          @unique
+  levelName      String?
+  levelFullName  String?
+  program        Program[]
+  classRoom      Classroom[]
+  student        Student[]
+  levelClassroom LevelClassroom[]
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  updatedBy      String?
+  createdBy      String?
+
+  @@map("levels")
+}
+
+// รายงานการเช็คชื่อหน้าเสาธง
+model ReportCheckIn {
+  id           String     @id @default(uuid())
+  teacherId    String // รหัสอาจารย์
+  teacherKey   String? // รหัสอาจารย์/ครู
+  teacher      Teacher?   @relation(fields: [teacherKey], references: [id])
+  classroomId  String // รหัสห้องเรียน
+  classroomKey String? // รหัสห้องเรียน
+  classroom    Classroom? @relation(fields: [classroomKey], references: [id])
+  present      String[]   @default([]) // รหัสนักเรียนที่มาเรียน
+  absent       String[]   @default([]) // รหัสนักเรียนที่ขาดเรียน
+  late         String[]   @default([]) // รหัสนักเรียนที่มาสาย
+  leave        String[]   @default([]) // รหัสนักเรียนที่ลา
+  internship   String[]   @default([]) // รหัสนักเรียนที่ฝึกงาน
+  checkInDate  DateTime? // วันที่เช็คอิน
+  checkInTime  DateTime? // เวลาเช็คอิน
+  status       String? // สถานะ 0 = ยังไม่ได้เช็คชื่อ, 1 = ได้เช็คชื่อแล้ว
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  updatedBy    String?
+  createdBy    String?
+
+  @@map("report_check_ins")
+}
+
+// รายงานการเช็คชื่อกิจกรรม
+model ActivityCheckInReport {
+  id           String     @id @default(uuid())
+  teacherId    String // รหัสอาจารย์
+  teacherKey   String? // รหัสอาจารย์/ครู
+  teacher      Teacher?   @relation(fields: [teacherKey], references: [id])
+  classroomId  String // รหัสห้องเรียน
+  classroomKey String? // รหัสห้องเรียน
+  classroom    Classroom? @relation(fields: [classroomKey], references: [id])
+  present      String[]   @default([]) // รหัสนักเรียนที่เข้าร่วมกิจกรรม
+  absent       String[]   @default([]) // รหัสนักเรียนที่ไม่เข้าร่วมกิจกรรม
+  checkInDate  DateTime? // วันที่เช็คอิน
+  checkInTime  DateTime? // เวลาเช็คอิน
+  status       String? // สถานะ 0 = ยังไม่ได้เช็คชื่อ, 1 = ได้เช็คชื่อแล้ว
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  updatedBy    String?
+  createdBy    String?
+
+  @@map("activity_check_in_reports")
+}
+
+// Audit logs
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String? // ประเภทการทำงาน
+  model     String? // ชื่อตาราง
+  recordId  String? // รหัสข้อมูล
+  fieldName String? // ชื่อฟิลด์
+  oldValue  String? // ค่าเก่า
+  newValue  String? // ค่าใหม่
+  detail    String? // รายละเอียด
+  ipAddr    String? // ไอพีที่ทำการเข้าใช้งาน
+  browser   String? // เบราว์เซอร์
+  device    String? // อุปกรณ์ที่ใช้
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?
+
+  @@map("audit_logs")
+}
+
+model GoodnessIndividual {
+  id             String     @id @default(uuid())
+  studentId      String // รหัสนักเรียน
+  studentKey     String // รหัสนักเรียน
+  student        Student?   @relation(fields: [studentKey], references: [id])
+  classroomId    String?
+  classroom      Classroom? @relation(fields: [classroomId], references: [id])
+  goodnessScore  Int? // คะแนนทความดี
+  goodnessDetail String? // รายละเอียดคะแนนทความดี
+  image          String? // รูปภาพ
+  goodDate       DateTime? // วันที่ทำความดี
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+  updatedBy      String?
+  createdBy      String?
+
+  @@map("goodness_individuals")
+}
+
+// บันทึกพฤติกรรมที่ไม่เหมาะสม
+model BadnessIndividual {
+  id            String     @id @default(uuid())
+  studentId     String // รหัสนักเรียน
+  studentKey    String // รหัสนักเรียน
+  student       Student?   @relation(fields: [studentKey], references: [id])
+  classroomId   String?
+  classroom     Classroom? @relation(fields: [classroomId], references: [id])
+  badnessScore  Int? // คะแนนทความไม่เหมาะสม
+  badnessDetail String? // รายละเอียดคะแนนทความไม่เหมาะสม
+  image         String? // รูปภาพ
+  badDate       DateTime? // วันที่ทำความไม่เหมาะสม
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  updatedBy     String?
+  createdBy     String?
+
+  @@map("badness_individuals")
+}
+
+// การเยี่ยมบ้านนักเรียน
+model VisitStudent {
+  id           String     @id @default(uuid())
+  studentId    String // รหัสนักเรียน
+  studentKey   String // รหัสนักเรียน
+  student      Student?   @relation(fields: [studentKey], references: [id])
+  classroomId  String?
+  classroom    Classroom? @relation(fields: [classroomId], references: [id])
+  visitDate    DateTime? // วันที่เยี่ยมบ้าน
+  visitDetail  Json? // รายละเอียดการเยี่ยมบ้าน
+  visitMap     String? // แผนที่การเยี่ยมบ้าน
+  images       String[]   @default([]) // รูปภาพ
+  visitNo      Int? // การเยียมบ้านครั้งที่
+  academicYear String?
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  updatedBy    String?
+  createdBy    String?
+
+  @@map("visit_students")
+}
+
+enum Role {
+  Admin
+  User
+  Student
+  Teacher
+  Parent
 }
