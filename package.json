@@ -1,10 +1,7 @@
 {
   "name": "msl-school-api",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "prepare": "husky",
     "dev": "turbo dev",
@@ -21,14 +18,13 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "turbo": "^2.4.2",
+    "@biomejs/biome": "^1.9.4",
     "husky": "^9.1.7",
-    "lint-staged": "^15.5.0"
+    "lint-staged": "^15.5.0",
+    "turbo": "^2.4.2"
   },
   "lint-staged": {
-    "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}": [
-      "biome check --write ."
-    ]
+    "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}": ["biome check --write --files-ignore-unknown=true"]
   },
   "packageManager": "bun@1.2.15"
 }
