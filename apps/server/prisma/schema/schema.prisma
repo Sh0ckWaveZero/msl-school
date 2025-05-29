@@ -21,6 +21,7 @@ model User {
   account            Account?
   student            Student?
   teacher            Teacher?
+  parent             Parent?
   sessions           Session[]
   userRole           UserRole[]
   status             String?
@@ -149,7 +150,10 @@ model Student {
   createdBy          String?
   goodnessIndividual GoodnessIndividual[]
   badnessIndividual  BadnessIndividual[]
-  VisitStudent       VisitStudent[]
+  visitStudent       VisitStudent[]
+  attendance         Attendance[]
+  grade              Grade[]
+  studentParent      StudentParent[]
 
   @@unique([userId, studentId], name: "student_users")
   @@map("student")
@@ -179,6 +183,7 @@ model Teacher {
   createdBy             String?
   reportCheckIn         ReportCheckIn[]
   activityCheckInReport ActivityCheckInReport[]
+  schedule              Schedule[]
 
   @@unique([userId, teacherId], name: "teacher_users")
   @@map("teacher")
@@ -212,7 +217,8 @@ model Classroom {
   activityCheckInReport ActivityCheckInReport[]
   goodnessIndividual    GoodnessIndividual[]
   badnessIndividual     BadnessIndividual[]
-  VisitStudent          VisitStudent[]
+  visitStudent          VisitStudent[]
+  schedule              Schedule[]
 
   @@map("classroom")
 }
@@ -300,21 +306,25 @@ model Program {
 
 // รายวิชา
 model Course {
-  id             String     @id @default(uuid())
-  courseId       String?    @unique
+  id             String        @id @default(uuid())
+  courseId       String?       @unique
   courseName     String?
   numberOfCredit Int? // จำนวนหน่วยกิต
   type           String? // รายวิชาพื้นฐาน, รายวิชาเพิ่มเติม, กิจกรรมพัฒนาผู้เรียน
   evaluation     String? // ประเมินผลรายภาคเรียน, ประเมินผลรายปี
   status         String?
   programId      String? // รหัสสาขาวิชา
-  program        Program?   @relation(fields: [programId], references: [id])
+  program        Program?      @relation(fields: [programId], references: [id])
   classroomId    String?
-  classroom      Classroom? @relation(fields: [classroomId], references: [id])
-  createdAt      DateTime   @default(now()) @map("created_at")
-  updatedAt      DateTime   @updatedAt @map("updated_at")
+  classroom      Classroom?    @relation(fields: [classroomId], references: [id])
+  subjectGroupId String?
+  subjectGroup   SubjectGroup? @relation(fields: [subjectGroupId], references: [id])
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
   updatedBy      String?
   createdBy      String?
+  schedule       Schedule[]
+  grade          Grade[]
 
   @@map("courses")
 }
@@ -472,4 +482,192 @@ enum Role {
   Student
   Teacher
   Parent
+}
+
+// ภาคเรียน/ปีการศึกษา
+model Term {
+  id           String    @id @default(uuid())
+  termId       String    @unique
+  name         String // "ภาคเรียนที่ 1/2567", "ปีการศึกษา 2567"
+  termType     String // "semester", "year"
+  startDate    DateTime
+  endDate      DateTime
+  isActive     Boolean   @default(false)
+  academicYear String // "2567"
+  schedule     Schedule[]
+  attendance   Attendance[]
+  grade        Grade[]
+  status       String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  updatedBy    String?
+  createdBy    String?
+
+  @@map("term")
+}
+
+// กลุ่มวิชา/ประเภทวิชา
+model SubjectGroup {
+  id          String    @id @default(uuid())
+  groupId     String    @unique
+  name        String // "วิชาสามัญ", "วิชาเฉพาะ", "วิชาพื้นฐาน"
+  description String?
+  courses     Course[]
+  status      String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedBy   String?
+  createdBy   String?
+
+  @@map("subject_group")
+}
+
+// ตารางเรียน
+model Schedule {
+  id          String     @id @default(uuid())
+  classroomId String
+  classroom   Classroom  @relation(fields: [classroomId], references: [id])
+  courseId    String
+  course      Course     @relation(fields: [courseId], references: [id])
+  teacherId   String
+  teacher     Teacher    @relation(fields: [teacherId], references: [id])
+  termId      String
+  term        Term       @relation(fields: [termId], references: [id])
+  dayOfWeek   Int // 1-7 (Monday-Sunday)
+  startTime   String // "08:30"
+  endTime     String // "10:30"
+  roomNumber  String?
+  attendance  Attendance[]
+  status      String?
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  updatedBy   String?
+  createdBy   String?
+
+  @@unique([classroomId, courseId, teacherId, termId, dayOfWeek, startTime])
+  @@map("schedule")
+}
+
+// การเข้าเรียนรายวิชา
+model Attendance {
+  id         String    @id @default(uuid())
+  studentId  String
+  student    Student   @relation(fields: [studentId], references: [id])
+  scheduleId String
+  schedule   Schedule  @relation(fields: [scheduleId], references: [id])
+  termId     String
+  term       Term      @relation(fields: [termId], references: [id])
+  date       DateTime
+  status     String // "present", "absent", "late", "excused"
+  note       String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  updatedBy  String?
+  createdBy  String?
+
+  @@unique([studentId, scheduleId, date])
+  @@map("attendance")
+}
+
+// ผลการเรียน/คะแนน
+model Grade {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
+  termId      String
+  term        Term     @relation(fields: [termId], references: [id])
+  gradeType   String // "midterm", "final", "assignment", "quiz"
+  score       Float?
+  maxScore    Float?
+  percentage  Float?
+  letterGrade String? // "A", "B+", "B", etc.
+  gpa         Float?
+  note        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedBy   String?
+  createdBy   String?
+
+  @@unique([studentId, courseId, termId, gradeType])
+  @@map("grade")
+}
+
+// วันหยุด/กิจกรรม
+model Holiday {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  type        String // "holiday", "event", "exam"
+  isRecurring Boolean  @default(false)
+  status      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedBy   String?
+  createdBy   String?
+
+  @@map("holiday")
+}
+
+// ข่าวสาร/ประกาศ
+model News {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  excerpt     String?
+  images      String[] @default([])
+  publishDate DateTime
+  expireDate  DateTime?
+  priority    String   @default("normal") // "low", "normal", "high", "urgent"
+  targetRole  String[] @default([]) // ["student", "teacher", "parent"]
+  isPublished Boolean  @default(false)
+  views       Int      @default(0)
+  status      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedBy   String?
+  createdBy   String?
+
+  @@map("news")
+}
+
+// ข้อมูลผู้ปกครอง
+model Parent {
+  id           String   @id @default(uuid())
+  parentId     String?  @unique
+  userId       String?  @unique
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relationship String // "father", "mother", "guardian"
+  students     StudentParent[]
+  occupation   String?
+  workPlace    String?
+  income       String?
+  education    String?
+  status       String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  updatedBy    String?
+  createdBy    String?
+
+  @@map("parent")
+}
+
+// ความสัมพันธ์ผู้ปกครอง-นักเรียน
+model StudentParent {
+  id        String   @id @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  parentId  String
+  parent    Parent   @relation(fields: [parentId], references: [id])
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?
+  createdBy String?
+
+  @@unique([studentId, parentId])
+  @@map("student_parent")
 }
