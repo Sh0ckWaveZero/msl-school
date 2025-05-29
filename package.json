@@ -1,5 +1,5 @@
 {
-  "name": "msl-school-api",
+  "name": "msl-school",
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {

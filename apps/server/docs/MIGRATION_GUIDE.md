@@ -1,6 +1,6 @@
 # Database Migration Guide
 
-คู่มือการใช้งาน Migration Scripts สำหรับระบบโรงเรียน MSL
+คู่มือการใช้งาน Database Migration สำหรับระบบโรงเรียน MSL (Bun + Prisma + PostgreSQL)
 
 ## 🚀 การเริ่มต้นใช้งาน
 
@@ -18,37 +18,46 @@ docker run --name postgres-msl \
   -p 5432:5432 -d postgres:15
 ```
 
-### 2. ตั้งค่า Environment
+### 2. ตั้งค่า Environment Variables
 
 ```bash
-# สำหรับ Development (ใช้ database local)
-export DATABASE_URL="postgresql://postgres:password@localhost:5432/msl_school_dev"
+# คัดลอกไฟล์ตัวอย่าง
+cp .env.example .env
 
-# หรือสร้างไฟล์ .env.local
-echo 'DATABASE_URL="postgresql://postgres:password@localhost:5432/msl_school_dev"' > .env.local
+# แก้ไข DATABASE_URL ใน .env
+DATABASE_URL="postgresql://postgres:password@localhost:5432/msl_school_dev"
+
+# สำหรับ Development
+NODE_ENV=development
+PORT=3000
+CORS_ORIGIN="http://localhost:3000"
+SESSION_SECRET="your-session-secret-key"
 ```
 
 ### 3. รัน Migration
 
 ```bash
-# วิธีที่ 1: ใช้ script ที่เตรียมไว้
-bun run db:migrate
+# Generate Prisma Client
+bun db:generate
 
-# วิธีที่ 2: รันโดยตรง
-./scripts/migrate.sh
+# วิธีที่ 1: Push schema changes (Development)
+bun db:push
 
-# วิธีที่ 3: ใช้ Prisma CLI
-npx prisma migrate dev --name init_complete_school_system
+# วิธีที่ 2: Create และ Apply migration (Production-ready)
+bun db:migrate
+
+# หรือใช้ Prisma CLI โดยตรง
+bunx prisma migrate dev --name init_complete_school_system --schema ./prisma/schema
 ```
 
 ### 4. เพิ่มข้อมูลตัวอย่าง (Optional)
 
 ```bash
 # เพิ่มข้อมูลตัวอย่าง
-bun run db:seed
+bun db:seed
 
-# หรือ
-./scripts/seed.sh
+# หรือรันไฟล์ seed โดยตรง
+bun run prisma/seed.ts
 ```
 
 ## 📋 คำสั่ง Scripts ที่มีให้ใช้
@@ -56,33 +65,52 @@ bun run db:seed
 ### Database Migration
 
 ```bash
-# สร้าง migration ใหม่และ apply
-bun run db:migrate
+# Generate Prisma Client (จำเป็นก่อน migration)
+bun db:generate
+
+# Push schema changes to database (Development)
+bun db:push
+
+# Create และ Apply migration (Production-ready)
+bun db:migrate
 
 # ดู migration status
-npx prisma migrate status
+bunx prisma migrate status --schema ./prisma/schema
 
-# Apply migration (production)
-npx prisma migrate deploy
+# Apply migration สำหรับ Production
+bunx prisma migrate deploy --schema ./prisma/schema
 ```
 
 ### Database Management
 
 ```bash
 # Reset database (⚠️ ลบข้อมูลทั้งหมด)
-bun run db:reset
+bun db:reset
 
 # เพิ่มข้อมูลตัวอย่าง
-bun run db:seed
+bun db:seed
 
-# เปิด Prisma Studio
-bun run db:studio
+# เปิด Prisma Studio (Database GUI)
+bun db:studio
 
 # Generate Prisma Client
-bun run db:generate
+bun db:generate
+```
 
-# Push schema changes (dev only)
-bun run db:push
+### Development Workflow
+
+```bash
+# 1. Start development server
+bun dev
+
+# 2. Check TypeScript types
+bun check-types
+
+# 3. Build for production
+bun build
+
+# 4. Start production build
+bun start
 ```
 
 ## 🔧 Troubleshooting
@@ -96,50 +124,140 @@ pg_isready -h localhost -p 5432
 
 # ตรวจสอบ DATABASE_URL
 echo $DATABASE_URL
+
+# Test connection
+bunx prisma db pull --schema ./prisma/schema
 ```
 
 **2. Migration failed**
 ```bash
-# ดู migration status
-npx prisma migrate status
+# ตรวจสอบ migration status
+bunx prisma migrate status --schema ./prisma/schema
 
-# ถ้าต้องการ reset และเริ่มใหม่
-bun run db:reset
-bun run db:migrate
+# Reset migrations (⚠️ ใช้เฉพาะ development)
+bunx prisma migrate reset --schema ./prisma/schema
+
+# Force push schema (skip migration)
+bunx prisma db push --force-reset --schema ./prisma/schema
 ```
 
-**3. Permission denied on scripts**
+**3. Prisma Client generation error**
 ```bash
-# ให้สิทธิ์ execute กับ scripts
-chmod +x scripts/*.sh
+# ลบและ generate ใหม่
+rm -rf prisma/generated
+bun db:generate
+
+# หรือ generate ด้วย Prisma CLI
+bunx prisma generate --schema ./prisma/schema
 ```
 
-### การแก้ไขปัญหา Schema
-
-**ถ้ามีการเปลี่ยนแปลง schema ใน development:**
-
+**4. Schema validation error**
 ```bash
-# สร้าง migration ใหม่
-npx prisma migrate dev --name describe_your_changes
+# ตรวจสอบ syntax error ใน schema
+bunx prisma validate --schema ./prisma/schema
 
-# หรือ push แบบไม่สร้าง migration (dev only)
-npx prisma db push
+# Format schema file
+bunx prisma format --schema ./prisma/schema
 ```
-
-## 🔐 Production Deployment
+## 🚀 Production Deployment
 
 ### สำหรับ Production Environment
 
 ```bash
-# 1. ตั้งค่า DATABASE_URL สำหรับ production
+# 1. ตั้งค่า Environment Variables
 export DATABASE_URL="your_production_database_url"
+export NODE_ENV="production"
+export PORT="3000"
 
 # 2. Apply migrations (ไม่สร้าง migration ใหม่)
-npx prisma migrate deploy
+bunx prisma migrate deploy --schema ./prisma/schema
 
-# 3. Generate client
-npx prisma generate
+# 3. Generate client for production
+bunx prisma generate --schema ./prisma/schema
+
+# 4. Build application
+bun build
+
+# 5. Start production server
+bun start
 ```
+
+### Docker Deployment
+
+```dockerfile
+# Dockerfile example
+FROM oven/bun:1.2-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json bun.lock ./
+COPY apps/server/package.json ./apps/server/
+
+# Install dependencies
+RUN bun install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Generate Prisma Client
+RUN cd apps/server && bunx prisma generate --schema ./prisma/schema
+
+# Build application
+RUN bun build
+
+# Expose port
+EXPOSE 3000
+
+# Run migrations and start
+CMD ["sh", "-c", "cd apps/server && bunx prisma migrate deploy --schema ./prisma/schema && bun start"]
+```
+
+## 📊 Database Schema Information
+
+### Prisma Configuration
+- **Generator**: `prisma-client` with ESM format
+- **Output**: `../generated` (relative to schema)
+- **Extensions**: `uuid-ossp` for PostgreSQL
+- **Preview Features**: `postgresqlExtensions`
+
+### Key Models Summary
+- **User Management**: User, Account, RolePermission, UserRole
+- **Education**: Level, Department, Program, Classroom, LevelClassroom
+- **Academic**: Course, SubjectGroup, Term, Schedule, Grade
+- **People**: Student, Teacher, Parent, StudentParent
+- **Activities**: Attendance, ReportCheckIn, ActivityCheckInReport
+- **Behavior**: GoodnessIndividual, BadnessIndividual, VisitStudent
+- **Content**: News, Holiday
+- **System**: Session, VerificationToken, AuditLog
+
+### Useful Commands Summary
+
+```bash
+# Development workflow
+bun install              # Install dependencies
+bun db:generate         # Generate Prisma client
+bun db:push            # Push schema changes
+bun db:seed            # Add sample data
+bun dev                # Start development server
+
+# Production workflow
+bun build              # Build for production
+bun db:migrate         # Create migration
+bunx prisma migrate deploy  # Apply migrations
+bun start              # Start production server
+
+# Maintenance
+bun db:studio          # Open database GUI
+bun db:reset           # Reset database (dev only)
+bun check-types        # TypeScript type checking
+```
+
+## 🔍 Additional Resources
+
+- **Prisma Documentation**: https://www.prisma.io/docs
+- **PostgreSQL Documentation**: https://www.postgresql.org/docs/
+- **Bun Documentation**: https://bun.sh/docs
 
 ### Best Practices สำหรับ Production
 
