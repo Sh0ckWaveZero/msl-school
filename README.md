@@ -154,3 +154,63 @@ msl-school-api/
 - `bun prepare`: Setup git hooks via Husky
 - `turbo dev`: Alternative development mode via Turborepo
 - `biome check`: Lint and format code
+
+## Docker Development Setup
+
+This project includes a Docker setup for development to ensure a consistent environment.
+
+### Prerequisites
+
+- Docker Desktop installed on your machine.
+
+### Running the Application with Docker Compose
+
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd msl-school-api
+    ```
+
+2.  **Environment Variables:**
+    Create a `.env` file in the `apps/server/` directory by copying the example:
+    ```bash
+    cp apps/server/.env.example apps/server/.env
+    ```
+    Update the `.env` file with your specific configurations, especially `DATABASE_URL` and `CORS_ORIGIN`.
+
+3.  **Build and Run:**
+    From the root of the project, run:
+    ```bash
+    docker-compose up --build
+    ```
+    This command will:
+    - Build the Docker image for the `server` application if it doesn't exist or if `Dockerfile` has changed.
+    - Start the `server` container.
+    - The server will be accessible at `http://localhost:3000` by default.
+
+4.  **Accessing Prisma Studio (if applicable and configured):**
+    If you need to access Prisma Studio, ensure your `DATABASE_URL` is correctly set up and accessible from the Docker container. You might need to run Prisma commands directly inside the container or expose the database port if it's also running in Docker.
+
+    To run commands inside the running `server` container:
+    ```bash
+    docker-compose exec server bun <your-command>
+    # Example:
+    docker-compose exec server bun prisma studio
+    ```
+
+5.  **Stopping the Application:**
+    To stop the containers, press `Ctrl+C` in the terminal where `docker-compose up` is running, or run:
+    ```bash
+    docker-compose down
+    ```
+
+### Directory Structure for Docker
+
+-   `apps/server/Dockerfile`: Defines the image for the Bun server application.
+-   `docker-compose.yml`: Orchestrates the services, including the server and potentially a database.
+
+### Notes
+
+-   The `apps/server` directory is mounted as a volume, so changes to your code will be reflected live in the container (thanks to `bun run --hot`).
+-   The `packages` directory is also mounted to ensure shared libraries are available and updated.
+-   Ensure your `DATABASE_URL` in `apps/server/.env` points to a database accessible from within the Docker network. If you're running a database service via `docker-compose` (like the commented-out `db` service in `docker-compose.yml`), you'd typically use the service name (e.g., `db`) as the host in your `DATABASE_URL`.

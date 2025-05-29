@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./apps/server
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/server:/usr/src/app
+      # Add more volumes as needed, for example, for prisma client generation
+      - ./apps/server/prisma:/usr/src/app/prisma
+      - ./packages:/usr/src/app/packages
+    environment:
+      - NODE_ENV=development
+      # Add other environment variables your application needs
+      # Example:
+      # - DATABASE_URL=postgresql://user:password@host:port/database
+      # - CORS_ORIGIN=http://localhost:3001
+    # If you have a database service, uncomment and configure it
+    # depends_on:
+    #   - db
+
+  # Example database service (PostgreSQL)
+  # db:
+  #   image: postgres:15
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     - POSTGRES_USER=youruser
+  #     - POSTGRES_PASSWORD=yourpassword
+  #     - POSTGRES_DB=yourdatabase
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+
+# volumes:
+#   postgres_data: # Persists database data across container restarts
