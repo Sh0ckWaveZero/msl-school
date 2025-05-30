@@ -18,16 +18,21 @@ app.use(
 )
 
 const handler = new RPCHandler(appRouter)
-app.use("/rpc/*", async (c, next) => {
+app.all("/rpc/*", async (c) => {
+  console.log("ORPC request:", c.req.method, c.req.url)
+
   const context = await createContext({ context: c })
-  const { matched, response } = await handler.handle(c.req.raw, {
+  const result = await handler.handle(c.req.raw, {
     prefix: "/rpc",
     context: context,
   })
-  if (matched) {
-    return c.newResponse(response.body, response)
+
+  console.log("Handler result matched:", result.matched)
+  if (result.matched) {
+    return result.response
   }
-  await next()
+
+  return c.json({ error: "Handler did not match" }, 404)
 })
 
 app.get("/", (c) => {

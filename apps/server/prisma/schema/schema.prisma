@@ -13,30 +13,28 @@ datasource db {
 
 // ผู้ใช้งาน
 model User {
-  id                 String             @id @default(uuid())
-  username           String             @unique
-  password           String
-  email              String?
-  role               Role               @default(User)
-  account            Account?
-  student            Student?
-  teacher            Teacher?
-  parent             Parent?
-  sessions           Session[]
-  userRole           UserRole[]
-  status             String?
-  createdAt          DateTime           @default(now()) @map("created_at")
-  updatedAt          DateTime           @updatedAt @map("updated_at")
-  updatedBy          String?
-  createdBy          String?
-  verificationTokens VerificationToken? @relation(fields: [verificationToken], references: [token])
-  verificationToken  String?
-  refreshToken       String?
-  accessToken        String?
-  expiresAt          Int?
+  id              String     @id @default(uuid())
+  name            String?
+  username        String?
+  displayUsername String?
+  password        String?
+  email           String?
+  emailVerified   Boolean    @default(false)
+  image           String?
+  role            Role       @default(User)
+  student         Student?
+  teacher         Teacher?
+  parent          Parent?
+  sessions        Session[]
+  accounts        Account[]
+  userRole        UserRole[]
+  status          String?
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  updatedBy       String?
+  createdBy       String?
 
-  @@unique([username, verificationToken], name: "users_key_verificationToken")
-  @@index([username, verificationToken], name: "users_index_verificationToken")
+  @@unique([email], map: "user_email_unique")
   @@map("user")
 }
 
@@ -68,54 +66,71 @@ model UserRole {
   @@map("user_role")
 }
 
-model VerificationToken {
+model Verification {
+  id         String    @id @default(uuid())
   identifier String
-  token      String   @unique
-  expires    DateTime
-  User       User[]
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now()) @map("created_at")
+  updatedAt  DateTime? @updatedAt @map("updated_at")
 
-  @@unique([identifier, token])
-  @@map("verification_token")
+  @@map("verification")
 }
 
 model Session {
-  id           String   @id @default(uuid())
-  sessionToken String   @unique
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId       String
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("session")
 }
 
 model Account {
-  id           String    @id @default(uuid())
-  userId       String?   @unique
-  avatar       String? // avatar path
-  title        String?
-  firstName    String?
-  lastName     String?
-  idCard       String?
-  birthDate    DateTime?
-  bloodType    String?
-  fatherName   String?
-  fatherPhone  String?
-  motherName   String?
-  motherPhone  String?
-  parentName   String?
-  parentPhone  String?
-  addressLine1 String?
-  subdistrict  String?
-  district     String?
-  province     String?
-  postcode     String?
-  country      String?
-  phone        String?
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  updatedBy    String?
-  createdBy    String?
-  user         User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String    @id @default(uuid())
+  accountId             String?   @map("account_id")
+  providerId            String?   @map("provider_id")
+  userId                String?   @unique @map("user_id")
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+  password              String?
+  // Profile data fields
+  avatar                String? // avatar path
+  title                 String?
+  firstName             String?   @map("first_name")
+  lastName              String?   @map("last_name")
+  idCard                String?   @map("id_card")
+  birthDate             DateTime? @map("birth_date")
+  bloodType             String?   @map("blood_type")
+  fatherName            String?   @map("father_name")
+  fatherPhone           String?   @map("father_phone")
+  motherName            String?   @map("mother_name")
+  motherPhone           String?   @map("mother_phone")
+  parentName            String?   @map("parent_name")
+  parentPhone           String?   @map("parent_phone")
+  addressLine1          String?   @map("address_line_1")
+  subdistrict           String?
+  district              String?
+  province              String?
+  postcode              String?
+  country               String?
+  phone                 String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  updatedBy             String?   @map("updated_by")
+  createdBy             String?   @map("created_by")
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, id], name: "account_key")
   @@index([firstName, lastName], name: "account_name")
@@ -486,20 +501,20 @@ enum Role {
 
 // ภาคเรียน/ปีการศึกษา
 model Term {
-  id           String    @id @default(uuid())
-  termId       String    @unique
+  id           String       @id @default(uuid())
+  termId       String       @unique
   name         String // "ภาคเรียนที่ 1/2567", "ปีการศึกษา 2567"
   termType     String // "semester", "year"
   startDate    DateTime
   endDate      DateTime
-  isActive     Boolean   @default(false)
+  isActive     Boolean      @default(false)
   academicYear String // "2567"
   schedule     Schedule[]
   attendance   Attendance[]
   grade        Grade[]
   status       String?
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
   updatedBy    String?
   createdBy    String?
 
@@ -508,14 +523,14 @@ model Term {
 
 // กลุ่มวิชา/ประเภทวิชา
 model SubjectGroup {
-  id          String    @id @default(uuid())
-  groupId     String    @unique
+  id          String   @id @default(uuid())
+  groupId     String   @unique
   name        String // "วิชาสามัญ", "วิชาเฉพาะ", "วิชาพื้นฐาน"
   description String?
   courses     Course[]
   status      String?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
   updatedBy   String?
   createdBy   String?
 
@@ -524,23 +539,23 @@ model SubjectGroup {
 
 // ตารางเรียน
 model Schedule {
-  id          String     @id @default(uuid())
+  id          String       @id @default(uuid())
   classroomId String
-  classroom   Classroom  @relation(fields: [classroomId], references: [id])
+  classroom   Classroom    @relation(fields: [classroomId], references: [id])
   courseId    String
-  course      Course     @relation(fields: [courseId], references: [id])
+  course      Course       @relation(fields: [courseId], references: [id])
   teacherId   String
-  teacher     Teacher    @relation(fields: [teacherId], references: [id])
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
   termId      String
-  term        Term       @relation(fields: [termId], references: [id])
+  term        Term         @relation(fields: [termId], references: [id])
   dayOfWeek   Int // 1-7 (Monday-Sunday)
   startTime   String // "08:30"
   endTime     String // "10:30"
   roomNumber  String?
   attendance  Attendance[]
   status      String?
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
   updatedBy   String?
   createdBy   String?
 
@@ -550,18 +565,18 @@ model Schedule {
 
 // การเข้าเรียนรายวิชา
 model Attendance {
-  id         String    @id @default(uuid())
+  id         String   @id @default(uuid())
   studentId  String
-  student    Student   @relation(fields: [studentId], references: [id])
+  student    Student  @relation(fields: [studentId], references: [id])
   scheduleId String
-  schedule   Schedule  @relation(fields: [scheduleId], references: [id])
+  schedule   Schedule @relation(fields: [scheduleId], references: [id])
   termId     String
-  term       Term      @relation(fields: [termId], references: [id])
+  term       Term     @relation(fields: [termId], references: [id])
   date       DateTime
   status     String // "present", "absent", "late", "excused"
   note       String?
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
   updatedBy  String?
   createdBy  String?
 
@@ -614,20 +629,20 @@ model Holiday {
 
 // ข่าวสาร/ประกาศ
 model News {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   content     String
   excerpt     String?
-  images      String[] @default([])
+  images      String[]  @default([])
   publishDate DateTime
   expireDate  DateTime?
-  priority    String   @default("normal") // "low", "normal", "high", "urgent"
-  targetRole  String[] @default([]) // ["student", "teacher", "parent"]
-  isPublished Boolean  @default(false)
-  views       Int      @default(0)
+  priority    String    @default("normal") // "low", "normal", "high", "urgent"
+  targetRole  String[]  @default([]) // ["student", "teacher", "parent"]
+  isPublished Boolean   @default(false)
+  views       Int       @default(0)
   status      String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   updatedBy   String?
   createdBy   String?
 
@@ -636,10 +651,10 @@ model News {
 
 // ข้อมูลผู้ปกครอง
 model Parent {
-  id           String   @id @default(uuid())
-  parentId     String?  @unique
-  userId       String?  @unique
-  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String          @id @default(uuid())
+  parentId     String?         @unique
+  userId       String?         @unique
+  user         User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   relationship String // "father", "mother", "guardian"
   students     StudentParent[]
   occupation   String?
@@ -647,8 +662,8 @@ model Parent {
   income       String?
   education    String?
   status       String?
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
   updatedBy    String?
   createdBy    String?
 

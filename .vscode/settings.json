@@ -1,6 +1,4 @@
 {
-    "postman.settings.dotenv-detection-notification-visibility": false,
-    "cSpell.words": [
-        "Ossp"
-    ]
+  "postman.settings.dotenv-detection-notification-visibility": false,
+  "cSpell.words": ["ORPC", "Ossp"]
 }
