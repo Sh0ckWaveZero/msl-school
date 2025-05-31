@@ -6,18 +6,20 @@
 ระบบจัดการโรงเรียนอาชีวศึกษา MSL School Frontend Application ที่ใช้เทคโนโลยีล่าสุด เพื่อรองรับการทำงานของผู้ใช้ 4 กลุ่ม: Admin, Teacher, Student และ Parent
 
 ### Technology Stack (Latest Versions)
-- **Framework**: Next.js 15.3.3
-- **UI Library**: Material-UI 7.1.0
-- **State Management**: Zustand 5.0.5
-- **Data Fetching**: TanStack Query 5.79.0
-- **Language**: TypeScript 5.3+
-- **Styling**: Emotion 11.14.0
+- **Framework**: Next.js 15 (App Router)
+- **UI Library**: Material-UI (MUI) latest
+- **State Management**: Zustand latest
+- **Data Fetching**: TanStack Query latest
+- **Language**: TypeScript 5.4+
+- **Styling**: Emotion & MUI System
 
 ### Product Goals
 1. สร้าง Modern Web Application ที่ responsive และ accessible
 2. รองรับ Multi-role interface ที่ user-friendly
 3. Performance optimization ด้วย latest technologies
 4. Type-safe development พร้อม scalable architecture
+5. Server Components และ React Server Actions สำหรับ performance
+6. Optimistic Updates ด้วย TanStack Query
 
 ## 👥 Target Users & Personas
 
@@ -41,69 +43,102 @@
 
 ### Frontend Architecture Pattern
 ```
-├── 📱 Presentation Layer (React Components)
+├── 📱 Presentation Layer (React Server Components)
 ├── 🔄 State Management (Zustand + TanStack Query)
 ├── 🌐 API Integration (ORPC Client)
 ├── 🎨 Design System (Material-UI + Custom Theme)
-└── ⚡ Performance (Next.js App Router + Optimizations)
+└── ⚡ Performance (Next.js App Router + Server Actions)
 ```
 
 ### Core Dependencies
 ```json
 {
-  "next": "15.3.3",
-  "@mui/material": "7.1.0",
-  "@mui/icons-material": "7.1.0",
-  "@mui/x-data-grid": "7.x",
-  "zustand": "5.0.5",
-  "@tanstack/react-query": "5.79.0",
-  "typescript": "5.3+",
-  "@emotion/react": "11.14.0",
-  "@emotion/styled": "11.14.0"
+  "next": "15.0.0",
+  "@mui/material": "latest",
+  "@mui/icons-material": "latest",
+  "@mui/x-data-grid": "latest",
+  "zustand": "latest",
+  "@tanstack/react-query": "latest",
+  "typescript": "5.4",
+  "@emotion/react": "latest",
+  "@emotion/styled": "latest"
 }
 ```
 
 ### App Router Structure (Next.js 15)
 ```
 app/
-├── layout.tsx              # Root layout with providers
-├── page.tsx               # Landing page
+├── layout.tsx                # Root layout with providers
+├── page.tsx                 # Landing page
 ├── (auth)/
 │   ├── login/
 │   └── register/
 ├── (dashboard)/
-│   ├── admin/             # Admin-only pages
-│   ├── teacher/           # Teacher pages
-│   ├── student/           # Student pages
-│   └── parent/            # Parent pages
-└── api/                   # API routes (if needed)
+│   ├── admin/               # Admin-only pages
+│   ├── teacher/             # Teacher pages
+│   ├── student/             # Student pages
+│   └── parent/              # Parent pages
+├── api/                     # API routes (if needed)
+└── _components/             # Shared components
 ```
 
 ## 🎨 UI/UX Design System
 
-### Material-UI 7.1.0 Theme Configuration
+### Material-UI Theme Configuration
 ```typescript
 const theme = createTheme({
-  palette: {
-    mode: 'light', // Dynamic theme switching
-    primary: {
-      main: '#1976d2',
-      light: '#42a5f5',
-      dark: '#1565c0',
+  // New color system with CSS variables
+  cssVarPrefix: 'msl',
+  colorSchemes: {
+    light: {
+      palette: {
+        primary: {
+          main: '#1976d2',
+          light: '#42a5f5',
+          dark: '#1565c0',
+        },
+        secondary: {
+          main: '#dc004e',
+        },
+        background: {
+          default: '#f5f5f5',
+          paper: '#ffffff',
+        },
+      },
     },
-    secondary: {
-      main: '#dc004e',
-    },
-    background: {
-      default: '#f5f5f5',
-      paper: '#ffffff',
+    dark: {
+      palette: {
+        primary: {
+          main: '#90caf9',
+          light: '#e3f2fd',
+          dark: '#42a5f5',
+        },
+        secondary: {
+          main: '#f48fb1',
+        },
+        background: {
+          default: '#121212',
+          paper: '#1e1e1e',
+        },
+      },
     },
   },
   typography: {
     fontFamily: '"Roboto", "Noto Sans Thai", sans-serif',
-    h1: { fontSize: '2.5rem', fontWeight: 600 },
-    h2: { fontSize: '2rem', fontWeight: 600 },
-    body1: { fontSize: '1rem', lineHeight: 1.6 },
+    h1: { 
+      fontSize: 'clamp(2rem, 8vw, 2.5rem)',
+      fontWeight: 600,
+      letterSpacing: '-0.02em'
+    },
+    h2: { 
+      fontSize: 'clamp(1.5rem, 6vw, 2rem)',
+      fontWeight: 600 
+    },
+    body1: { 
+      fontSize: '1rem',
+      lineHeight: 1.6,
+      letterSpacing: '0.00938em'
+    },
   },
   components: {
     MuiButton: {
@@ -111,6 +146,10 @@ const theme = createTheme({
         root: {
           borderRadius: 8,
           textTransform: 'none',
+          '&:focus-visible': {
+            outline: '2px solid var(--msl-palette-primary-main)',
+            outlineOffset: '2px',
+          },
         },
       },
     },
@@ -118,7 +157,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--msl-shadow-2)',
         },
       },
     },
@@ -136,6 +175,8 @@ const theme = createTheme({
 - Keyboard navigation support
 - Screen reader optimization
 - High contrast mode support
+- Focus visible indicators
+- Reduced motion support
 
 ## 🔄 State Management Strategy
 
@@ -153,10 +194,10 @@ interface AuthStore {
 // UI Store
 interface UIStore {
   sidebarOpen: boolean;
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'system';
   notifications: Notification[];
   toggleSidebar: () => void;
-  setTheme: (theme: 'light' | 'dark') => void;
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
 }
 
 // Data Stores (per feature)
@@ -178,12 +219,39 @@ export const queryKeys = {
   course: (id: string) => ['courses', id] as const,
 };
 
-// Custom Hooks
+// Custom Hooks with Suspense
 export const useUser = (id: string) => {
   return useQuery({
     queryKey: queryKeys.user(id),
     queryFn: () => userApi.getById(id),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    suspense: true,
+  });
+};
+
+// Optimistic Updates
+export const useUpdateUser = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data: UpdateUserData) => userApi.update(data),
+    onMutate: async (newData) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.user(newData.id) });
+      const previousData = queryClient.getQueryData(queryKeys.user(newData.id));
+      
+      queryClient.setQueryData(queryKeys.user(newData.id), newData);
+      
+      return { previousData };
+    },
+    onError: (err, newData, context) => {
+      queryClient.setQueryData(
+        queryKeys.user(newData.id),
+        context?.previousData
+      );
+    },
+    onSettled: (newData) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.user(newData.id) });
+    },
   });
 };
 ```
@@ -214,10 +282,10 @@ export const useUser = (id: string) => {
 ```
 
 ### Component Patterns
-1. **Compound Components**: สำหรับ complex UI components
-2. **Render Props**: สำหรับ data sharing logic
-3. **Custom Hooks**: สำหรับ business logic reuse
-4. **Higher-Order Components**: สำหรับ authentication guards
+1. **Server Components**: ใช้ React Server Components สำหรับ static content
+2. **Client Components**: ใช้ "use client" เฉพาะ components ที่ต้องการ interactivity
+3. **Suspense Boundaries**: จัดการ loading states ด้วย Suspense
+4. **Error Boundaries**: จัดการ error states อย่างเหมาะสม
 
 ## 📊 Feature Specifications
 
@@ -248,52 +316,26 @@ export const useUser = (id: string) => {
 ### 5. Communication System
 - **Messaging**: Real-time chat between users
 - **Notifications**: Push notifications for important events
-- **Announcements**: School-wide announcements
-- **Parent Communications**: Direct teacher-parent messaging
 
-## ⚡ Performance Requirements
+## 🚀 Performance Optimization
 
-### Core Web Vitals Targets
-- **LCP (Largest Contentful Paint)**: < 2.5s
-- **FID (First Input Delay)**: < 100ms
-- **CLS (Cumulative Layout Shift)**: < 0.1
+### Server-side Optimization
+- **Server Components**: ใช้ RSC เพื่อลด JavaScript bundle
+- **Server Actions**: ใช้ form actions แทน client-side handlers
+- **Edge Runtime**: Deploy critical functions to edge
+- **Streaming**: ใช้ Suspense สำหรับ progressive loading
 
-### Performance Optimization
-```typescript
-// Next.js 15 Optimizations
-// 1. App Router with Streaming
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return (
-    <Suspense fallback={<LoadingSpinner />}>
-      {children}
-    </Suspense>
-  );
-}
+### Client-side Optimization
+- **Code Splitting**: ใช้ dynamic imports สำหรับ heavy components
+- **Image Optimization**: ใช้ next/image พร้อม priority loading
+- **Font Optimization**: ใช้ next/font สำหรับ web fonts
+- **Bundle Analysis**: ติดตาม bundle size ด้วย @next/bundle-analyzer
 
-// 2. Dynamic Imports
-const AdminPanel = dynamic(() => import('./AdminPanel'), {
-  loading: () => <LoadingSkeleton />,
-});
-
-// 3. Image Optimization
-import Image from 'next/image';
-
-// 4. TanStack Query Caching
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60 * 1000, // 1 minute
-      cacheTime: 10 * 60 * 1000, // 10 minutes
-    },
-  },
-});
-```
-
-### Bundle Optimization
-- **Code Splitting**: Route-based and component-based
-- **Tree Shaking**: Remove unused Material-UI components
-- **Asset Optimization**: WebP images, font optimization
-- **Lazy Loading**: Components and routes
+### Data Fetching Strategy
+- **Parallel Routes**: โหลด data พร้อมกันหลาย routes
+- **Infinite Loading**: ใช้ TanStack Query สำหรับ infinite scroll
+- **Optimistic Updates**: อัปเดต UI ทันทีก่อน server response
+- **Background Revalidation**: อัปเดต stale data ใน background
 
 ## 🔒 Security & Authentication
 
@@ -1348,3 +1390,570 @@ interface ExternalIntegrations {
 - [ ] Mobile app integration examples
 - [ ] Error handling standards
 - [ ] Security best practices documented
+
+## 🚨 Error Handling Strategy
+
+### Global Error Handling
+```typescript
+// Global Error Handler
+export class AppError extends Error {
+  constructor(
+    public code: string,
+    public message: string,
+    public status: number = 500,
+    public data?: any
+  ) {
+    super(message);
+  }
+}
+
+// Error Handler HOC
+export const withErrorHandler = (Component: React.ComponentType) => {
+  return function ErrorBoundary(props: any) {
+    const [error, setError] = useState<Error | null>(null);
+    
+    if (error) {
+      return (
+        <ErrorDisplay
+          error={error}
+          onRetry={() => setError(null)}
+        />
+      );
+    }
+    
+    return <Component {...props} />;
+  };
+};
+
+// API Error Handling
+export const apiErrorHandler = (error: unknown) => {
+  if (error instanceof AppError) {
+    toast.error(error.message);
+    if (error.status === 401) {
+      router.push('/login');
+    }
+  } else {
+    console.error(error);
+    toast.error('An unexpected error occurred');
+  }
+};
+```
+
+### Error Types & Responses
+```typescript
+// Error Types
+export enum ErrorCode {
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
+  AUTHORIZATION_ERROR = 'AUTHORIZATION_ERROR',
+  NOT_FOUND = 'NOT_FOUND',
+  CONFLICT = 'CONFLICT',
+  INTERNAL_ERROR = 'INTERNAL_ERROR'
+}
+
+// Error Response Format
+interface ErrorResponse {
+  code: ErrorCode;
+  message: string;
+  details?: Record<string, string[]>;
+  timestamp: string;
+  requestId: string;
+}
+
+// Error Handling in Components
+const UserProfile = () => {
+  const { data, error } = useQuery({
+    queryKey: ['user'],
+    queryFn: () => fetchUser(),
+    onError: (error) => {
+      if (error instanceof NotFoundError) {
+        router.push('/404');
+      } else {
+        apiErrorHandler(error);
+      }
+    }
+  });
+};
+```
+
+## 📊 Monitoring & Analytics
+
+### Application Performance Monitoring
+```typescript
+// APM Configuration
+export const apm = {
+  // Datadog RUM configuration
+  datadogRum: {
+    applicationId: process.env.NEXT_PUBLIC_DD_APP_ID,
+    clientToken: process.env.NEXT_PUBLIC_DD_CLIENT_TOKEN,
+    site: 'datadoghq.com',
+    service: 'msl-school-frontend',
+    env: process.env.NEXT_PUBLIC_ENV,
+    version: process.env.NEXT_PUBLIC_VERSION,
+    trackInteractions: true,
+    defaultPrivacyLevel: 'mask-user-input'
+  },
+  
+  // Error tracking with Sentry
+  sentry: {
+    dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    environment: process.env.NEXT_PUBLIC_ENV,
+    tracesSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0
+  }
+};
+
+// Performance Monitoring
+export const withPerformanceMonitoring = (Component: React.ComponentType) => {
+  return function PerformanceWrapper(props: any) {
+    useEffect(() => {
+      const startTime = performance.now();
+      
+      return () => {
+        const duration = performance.now() - startTime;
+        apm.trackMetric('component_render_time', {
+          component: Component.name,
+          duration
+        });
+      };
+    }, []);
+    
+    return <Component {...props} />;
+  };
+};
+```
+
+### User Analytics
+```typescript
+// Analytics Events
+export const analyticsEvents = {
+  pageView: (page: string) => ({
+    event: 'page_view',
+    page_title: page
+  }),
+  
+  userAction: (action: string, data?: any) => ({
+    event: 'user_action',
+    action_type: action,
+    ...data
+  }),
+  
+  error: (error: Error) => ({
+    event: 'error',
+    error_type: error.name,
+    error_message: error.message
+  })
+};
+
+// Analytics Provider
+export const AnalyticsProvider: React.FC = ({ children }) => {
+  useEffect(() => {
+    // Initialize analytics
+    initializeAnalytics();
+    
+    // Track route changes
+    router.events.on('routeChangeComplete', (url) => {
+      trackPageView(url);
+    });
+  }, []);
+  
+  return children;
+};
+```
+
+## 🌐 Internationalization (i18n)
+
+### Multi-language Support
+```typescript
+// i18n Configuration
+export const i18nConfig = {
+  defaultLocale: 'th',
+  locales: ['th', 'en'],
+  localeDetection: true
+};
+
+// Translation Keys
+export const translations = {
+  th: {
+    common: {
+      welcome: 'ยินดีต้อนรับ',
+      login: 'เข้าสู่ระบบ',
+      logout: 'ออกจากระบบ'
+    },
+    validation: {
+      required: 'กรุณากรอกข้อมูล',
+      email: 'กรุณากรอกอีเมลให้ถูกต้อง'
+    }
+  },
+  en: {
+    common: {
+      welcome: 'Welcome',
+      login: 'Login',
+      logout: 'Logout'
+    },
+    validation: {
+      required: 'This field is required',
+      email: 'Please enter a valid email'
+    }
+  }
+};
+
+// Date/Time Formatting
+export const dateTimeFormatters = {
+  shortDate: new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  }),
+  
+  longDate: new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    weekday: 'long'
+  }),
+  
+  time: new Intl.DateTimeFormat('th-TH', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+};
+```
+
+## ♿ Accessibility (a11y)
+
+### ARIA Integration
+```typescript
+// Accessible Components
+export const AccessibleButton = styled(Button)`
+  &:focus-visible {
+    outline: 2px solid var(--msl-palette-primary-main);
+    outline-offset: 2px;
+  }
+  
+  &[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+`;
+
+// Focus Management
+export const useFocusTrap = (ref: React.RefObject<HTMLElement>) => {
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    
+    const focusableElements = element.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    
+    const firstElement = focusableElements[0] as HTMLElement;
+    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+    
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement) {
+          lastElement.focus();
+          e.preventDefault();
+        }
+      } else {
+        if (document.activeElement === lastElement) {
+          firstElement.focus();
+          e.preventDefault();
+        }
+      }
+    };
+    
+    element.addEventListener('keydown', handleTabKey);
+    return () => element.removeEventListener('keydown', handleTabKey);
+  }, [ref]);
+};
+```
+
+## 📱 Progressive Web App (PWA)
+
+### Service Worker
+```typescript
+// next.config.js
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development'
+});
+
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(
+      (registration) => {
+        console.log('SW registered: ', registration);
+      },
+      (error) => {
+        console.log('SW registration failed: ', error);
+      }
+    );
+  });
+}
+
+// Offline Support
+const offlineData = {
+  fallbackPage: '/offline',
+  staticAssets: [
+    '/images/logo.png',
+    '/fonts/Roboto.woff2',
+    '/styles/main.css'
+  ]
+};
+
+// Push Notifications
+export const initializePushNotifications = async () => {
+  const registration = await navigator.serviceWorker.ready;
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  });
+  
+  await fetch('/api/notifications/subscribe', {
+    method: 'POST',
+    body: JSON.stringify(subscription)
+  });
+};
+```
+
+## 🔍 SEO & Social Media
+
+### Meta Tags Configuration
+```typescript
+// Default Meta Tags
+export const defaultMeta = {
+  title: 'MSL School Management System',
+  description: 'ระบบจัดการโรงเรียนอาชีวศึกษาที่ทันสมัย',
+  keywords: 'โรงเรียน, อาชีวศึกษา, การศึกษา, ระบบจัดการ',
+  ogImage: 'https://msl-school.com/og-image.jpg',
+  twitterCard: 'summary_large_image'
+};
+
+// Dynamic Meta Tags
+export const generateMetaTags = (page: string, data?: any) => {
+  return {
+    title: `${page} | MSL School`,
+    description: data?.description || defaultMeta.description,
+    openGraph: {
+      title: `${page} | MSL School`,
+      description: data?.description || defaultMeta.description,
+      images: [
+        {
+          url: data?.image || defaultMeta.ogImage,
+          width: 1200,
+          height: 630,
+          alt: page
+        }
+      ]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${page} | MSL School`,
+      description: data?.description || defaultMeta.description,
+      image: data?.image || defaultMeta.ogImage
+    }
+  };
+};
+
+// Structured Data
+export const generateStructuredData = (type: string, data: any) => {
+  switch (type) {
+    case 'Organization':
+      return {
+        '@context': 'https://schema.org',
+        '@type': 'EducationalOrganization',
+        name: 'MSL School',
+        description: defaultMeta.description,
+        url: 'https://msl-school.com',
+        logo: 'https://msl-school.com/logo.png'
+      };
+    case 'Course':
+      return {
+        '@context': 'https://schema.org',
+        '@type': 'Course',
+        name: data.title,
+        description: data.description,
+        provider: {
+          '@type': 'EducationalOrganization',
+          name: 'MSL School'
+        }
+      };
+    default:
+      return null;
+  }
+};
+```
+
+## 💾 Data Migration & Backup
+
+### Data Migration Strategy
+```typescript
+// Migration Types
+interface MigrationContext {
+  sourceDb: Database;
+  targetDb: Database;
+  logger: Logger;
+  batch: {
+    size: number;
+    current: number;
+  };
+}
+
+// Migration Utilities
+export const migrationUtils = {
+  // Batch Processing
+  async processBatch<T>(
+    items: T[],
+    processor: (item: T) => Promise<void>,
+    batchSize = 100
+  ) {
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+      await Promise.all(batch.map(processor));
+    }
+  },
+  
+  // Data Validation
+  validateData: (data: any, schema: ZodSchema) => {
+    const result = schema.safeParse(data);
+    if (!result.success) {
+      throw new ValidationError(result.error);
+    }
+    return result.data;
+  },
+  
+  // Error Recovery
+  async withRecovery<T>(
+    operation: () => Promise<T>,
+    fallback: () => Promise<T>
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      console.error('Operation failed, attempting recovery:', error);
+      return await fallback();
+    }
+  }
+};
+
+// Backup Procedures
+export const backupProcedures = {
+  // Database Backup
+  async createDatabaseBackup() {
+    const timestamp = new Date().toISOString();
+    const filename = `backup-${timestamp}.sql`;
+    
+    await executeCommand(`pg_dump ${process.env.DATABASE_URL} > ${filename}`);
+    await uploadToStorage('backups', filename);
+    
+    return {
+      filename,
+      timestamp,
+      size: await getFileSize(filename)
+    };
+  },
+  
+  // File Storage Backup
+  async backupFileStorage() {
+    const files = await listFiles();
+    const backupPromises = files.map(async (file) => {
+      const backup = await createFileBackup(file);
+      return {
+        original: file,
+        backup,
+        timestamp: new Date()
+      };
+    });
+    
+    return Promise.all(backupPromises);
+  }
+};
+```
+
+## 🔌 Third-party Integrations
+
+### Payment Integration
+```typescript
+// Payment Provider Setup
+export const paymentProviders = {
+  stripe: {
+    publicKey: process.env.NEXT_PUBLIC_STRIPE_KEY,
+    async createPaymentIntent(amount: number, currency: string) {
+      const response = await fetch('/api/payments/create-intent', {
+        method: 'POST',
+        body: JSON.stringify({ amount, currency })
+      });
+      return response.json();
+    }
+  },
+  
+  promptpay: {
+    async generateQR(amount: number) {
+      const response = await fetch('/api/payments/promptpay-qr', {
+        method: 'POST',
+        body: JSON.stringify({ amount })
+      });
+      return response.json();
+    }
+  }
+};
+
+// Email Service
+export const emailService = {
+  provider: 'SendGrid',
+  async sendEmail(options: EmailOptions) {
+    const response = await fetch('/api/email/send', {
+      method: 'POST',
+      body: JSON.stringify(options)
+    });
+    return response.json();
+  },
+  
+  templates: {
+    welcome: 'template_welcome',
+    resetPassword: 'template_reset_password',
+    courseEnrollment: 'template_course_enrollment'
+  }
+};
+
+// File Storage
+export const storageService = {
+  provider: 'AWS S3',
+  async uploadFile(file: File, path: string) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('path', path);
+    
+    const response = await fetch('/api/storage/upload', {
+      method: 'POST',
+      body: formData
+    });
+    return response.json();
+  },
+  
+  getSignedUrl(path: string) {
+    return fetch(`/api/storage/signed-url?path=${path}`).then(r => r.json());
+  }
+};
+
+// Analytics Integration
+export const analyticsService = {
+  provider: 'Google Analytics',
+  trackEvent(category: string, action: string, label?: string) {
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', action, {
+        event_category: category,
+        event_label: label
+      });
+    }
+  }
+};
+```
